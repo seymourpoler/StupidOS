@@ -19,11 +19,11 @@
 ;Bios parameter block
 ;----------------------------------------------------------------------------
 
-        OEM			db 'StupidOS'	 ; 8 bytes
+        OEM						db 'StupidOS'	 ; 8 bytes
         BytesPerSector          dw 0x200	 ; 512 bytes per sector
         SectorsPerCluster       db 1		 ; Single sector per cluster
         ReservedSectors         dw 1		 ; Reserved sector(s) -> Boot Sector
-        TotalFATs	        db 2		 ; 2 FATs present -> Dunno where the second one is
+        TotalFATs	        	db 2		 ; 2 FATs present -> Dunno where the second one is
         MaxRootDirectoryEntries dw 0x00E0	 ; 224 root directory entries
         TotalSectors            dw 0x0B40	 ; 2880 sectors in total
         MediaDescriptor         db 0xF0		 ; 1.44M floppy
@@ -50,8 +50,8 @@ stupid_start:
         mov ax, 0x07C0
         mov ds, ax                      ; Setup data segment
 
-	mov ax, 0xb800			
-	mov fs, ax                      ; To access video memory
+		mov ax, 0xb800			
+		mov fs, ax                      ; To access video memory
 
         mov ax, 0x9000
         mov ss, ax                      ; Setup a stack
@@ -67,11 +67,11 @@ stupid_start:
         
 stupid_relocate: 
 
-	mov ax,0x8000
-	mov es,ax
-	mov di,0			; "es:(e)di" -> 0x8000:0x0000 Destination location
-	
-	mov si,0			; "ds:(e)si" -> 0x07C0:0x0000 Start here
+		mov ax,0x8000
+		mov es,ax
+		mov di,0			; "es:(e)di" -> 0x8000:0x0000 Destination location
+		
+		mov si,0			; "ds:(e)si" -> 0x07C0:0x0000 Start here
 
         mov cx, 0x200                   ; Length of boot code is 512 bytes
         cld                             ; Move in forward direction
@@ -89,7 +89,7 @@ stupid_relocated:
         mov es, ax
         mov di, 0                       ; "es:(e)di" -> 0x7000:0x0000 Destination location
 
-        mov ax, 0x0040			; Bios data area starts here
+        mov ax, 0x0040					; Bios data area starts here
         mov ds, ax
         mov si, 0                       ; "ds:(e)si" -> 0x0040:0x0000 Start here
 
@@ -100,16 +100,16 @@ stupid_relocated:
         mov ax, 0x8000
         mov ds, ax                      ; Data segment is made to point the new location
 
-	call stupid_clear_screen
-	call stupid_reset_drive		; Reset floppy drive
+		call stupid_clear_screen
+		call stupid_reset_drive			; Reset floppy drive
 		
 stupid_drive_ok:	
 	mov ax,0x0200
 	mov es,ax
-	mov bx,0x0			; Read from floppy to 0x0200:0x0000
+	mov bx,0x0					; Read from floppy to 0x0200:0x0000
 	
-	mov al,0x3			; No of sectors to read	
-	mov cl,0x2			; Starting sector
+	mov al,0x3					; No of sectors to read	
+	mov cl,0x2					; Starting sector
 	
 	call stupid_read_n_sectors	; Read the no of sectors specified above
 
@@ -117,7 +117,7 @@ stupid_drive_ok:
 	call stupid_write_char	
 
 
-	jmp 0x0200:0x0000		; Jump to secondary loader (from sector 1)
+	jmp 0x0200:0x0000			; Jump to secondary loader (from sector 1)
 
 
 
@@ -159,23 +159,23 @@ stupid_read_sectors:
 ;         cl = sector start number
 
         push ax
-	mov byte al, 'A'
-	call stupid_write_char
-	pop ax
+		mov byte al, 'A'
+		call stupid_write_char
+		pop ax
 
-	mov ah, 0x02                    ; Set ah to 2 to read sector(s) into memory
-	mov al, 0x01
+		mov ah, 0x02                    ; Set ah to 2 to read sector(s) into memory
+		mov al, 0x01
         mov ch, 0                       ; 'ch' contains the cylinder/track number
         mov dl, [stupid_bootdrive]      ; 'dl' contains the drive number
         mov dh, 0                       ; 'dh' contains the head number
         int 0x13                        ; Disk - Read sector interrupt
-	jc stupid_drive_read_retry	; Drive may fail in the first attempt. So try again
-					; till it gets loaded, from scratch
-	push ax
-	mov byte al, 'S'
-	call stupid_write_char
-	pop ax
-	ret				; Success
+		jc stupid_drive_read_retry		; Drive may fail in the first attempt. So try again
+										; till it gets loaded, from scratch
+		push ax
+		mov byte al, 'S'
+		call stupid_write_char
+		pop ax
+		ret								; Success
 
 stupid_drive_read_retry:
 	call stupid_reset_drive		; Reset the drive again before reading again
@@ -187,33 +187,33 @@ stupid_read_n_sectors:
 ;		es:bx address of Destination
 
 stupid_next_sector:
-	cmp al, 0			; Check if all sectors read
-	je stupid_read_over		; If yes return
+	cmp al, 0					; Check if all sectors read
+	je stupid_read_over			; If yes return
 	call stupid_reset_drive		; Else reset drive	
-	push ax				; Push remaining sectors to be read to stack
-	mov al, 0x1			; Let sectors to be read be one
+	push ax						; Push remaining sectors to be read to stack
+	mov al, 0x1					; Let sectors to be read be one
 	call stupid_read_sectors	; Read one sector starting from from cl
-	pop ax				; Pop sectors to be read
-	inc cl				; Move to next sector
-	dec al				; Decrement sectors to read by one
-	add bx, 0x200			; Increment the memory pointer
+	pop ax						; Pop sectors to be read
+	inc cl						; Move to next sector
+	dec al						; Decrement sectors to read by one
+	add bx, 0x200				; Increment the memory pointer
 	jmp stupid_next_sector		; Read next sector
 
 stupid_read_over:
-	push ax			; Print N to indicate read over
+	push ax						; Print N to indicate read over
 	mov byte al, 'N'
 	call stupid_write_char
 	pop ax
-	ret			; return 
+	ret							; return 
         
 stupid_write_char:
-	push bx				; Store current value of bx
+	push bx						; Store current value of bx
 	mov bx, [stupid_cur_pos]	; Set bx to cursor position
 	mov byte [fs:bx], al		; Copy the character to be printer to
-					; 0xB800:bx
-	add bx, 0x2			; Increment cursor position
+								; 0xB800:bx
+	add bx, 0x2					; Increment cursor position
 	mov [stupid_cur_pos], bx	; Store the value in memory
-	pop bx				; Load old value of bx
+	pop bx						; Load old value of bx
 	ret
 
 ;----------------------------------------------------------------------------
